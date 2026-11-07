@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="買い物">
+<meta name="theme-color" content="#10b981">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>買い物リスト</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --shop: #10b981;
+  --shop-dark: #059669;
+  --shop-light: #d1fae5;
+  --bg: #f8fafc;
+  --surface: #fff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+header {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  padding: calc(16px + var(--safe-top)) 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: 0 1px 8px rgba(0,0,0,.08);
+}
+header h1 { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+header .sub { font-size: 0.78rem; opacity: .9; margin-top: 4px; }
+
+main { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+.card {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  margin-bottom: 14px;
+}
+
+.field { margin-bottom: 10px; }
+.field:last-of-type { margin-bottom: 0; }
+label {
+  display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted);
+  margin-bottom: 5px; letter-spacing: .03em;
+}
+input[type=text], input[type=date], select {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 11px 12px; font-size: 0.95rem; color: var(--text);
+  background: var(--surface); outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+input:focus, select:focus { border-color: var(--shop); }
+input.error { border-color: var(--danger); animation: shake .3s; }
+@keyframes shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+.row { display: flex; gap: 10px; }
+.row .field { flex: 1; min-width: 0; }
+.row .field.qty { flex: 0 0 88px; }
+
+.add-btn {
+  width: 100%; margin-top: 12px; border: none; border-radius: 10px;
+  background: var(--shop); color: #fff; font-size: 1rem; font-weight: 700;
+  height: 48px; cursor: pointer; transition: background .15s;
+}
+.add-btn:active { background: var(--shop-dark); }
+
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.counts { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.counts b { color: var(--shop-dark); font-size: 1rem; }
+.tool-btns { display: flex; gap: 6px; }
+.tool-btn {
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 8px; padding: 6px 11px; font-size: 0.76rem; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.tool-btn.on { background: var(--shop-light); border-color: var(--shop); color: var(--shop-dark); }
+
+.group-head {
+  font-size: 0.74rem; font-weight: 700; color: var(--muted);
+  margin: 14px 0 7px; display: flex; align-items: center; gap: 6px;
+}
+.group-head::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+.list { display: flex; flex-direction: column; gap: 7px; }
+
+.item {
+  background: var(--surface); border-radius: 12px; padding: 11px 13px;
+  display: flex; align-items: center; gap: 11px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  transition: opacity .15s;
+}
+.item.bought { opacity: .55; }
+
+.check {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%;
+  border: 2px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #fff;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  transition: all .15s;
+}
+.check.on { background: var(--shop); border-color: var(--shop); }
+
+.body { flex: 1; min-width: 0; }
+.title { font-size: 0.95rem; font-weight: 600; word-break: break-word; }
+.item.bought .title { text-decoration: line-through; }
+.qty-tag { font-size: 0.8rem; color: var(--shop-dark); font-weight: 700; margin-left: 6px; }
+.meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.badge {
+  font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+  background: var(--shop-light); color: #065f46; white-space: nowrap;
+}
+.badge.date { background: #f1f5f9; color: var(--muted); }
+.badge.date.soon { background: #fef3c7; color: #92400e; }
+.badge.date.over { background: #fee2e2; color: #b91c1c; }
+
+.del {
+  background: none; border: none; color: #cbd5e0; font-size: 1rem;
+  cursor: pointer; padding: 5px; flex-shrink: 0; line-height: 1;
+}
+.del:active { color: var(--danger); }
+
+.empty {
+  text-align: center; color: var(--muted); font-size: 0.9rem;
+  padding: 44px 16px; background: var(--surface); border-radius: 14px;
+}
+.empty .big { font-size: 2.4rem; opacity: .35; display: block; margin-bottom: 10px; }
+
+.footer-acts { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.ghost {
+  flex: 1; min-width: 110px; border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--muted); border-radius: 10px; padding: 11px 8px;
+  font-size: 0.8rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.ghost.warn { color: var(--danger); }
+.ghost:active { background: #f1f5f9; }
+
+.toast {
+  position: fixed; bottom: calc(22px + var(--safe-bottom)); left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: #1e293b; color: #fff; padding: 11px 20px; border-radius: 10px;
+  font-size: 0.87rem; font-weight: 600; z-index: 100;
+  opacity: 0; transition: all .22s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛒 買い物リスト</h1>
+  <div class="sub" id="sub">読み込み中...</div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="field">
+      <label>買う物</label>
+      <input type="text" id="fItem" placeholder="例：牛乳" onkeydown="if(event.key==='Enter')add()">
+    </div>
+    <div class="row">
+      <div class="field qty">
+        <label>数量</label>
+        <input type="text" id="fQty" placeholder="1" onkeydown="if(event.key==='Enter')add()">
+      </div>
+      <div class="field">
+        <label>支出項目</label>
+        <select id="fCat"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>購入予定日</label>
+      <input type="date" id="fDate">
+    </div>
+    <button class="add-btn" onclick="add()">＋ 追加</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="counts" id="counts"></div>
+    <div class="tool-btns">
+      <button class="tool-btn" id="btnGroup" onclick="toggleGroup()">カテゴリ別</button>
+    </div>
+  </div>
+
+  <div id="listArea"></div>
+
+  <div class="footer-acts">
+    <button class="ghost warn" onclick="clearBought()">購入済みを削除</button>
+    <button class="ghost" onclick="exportJson()">バックアップ</button>
+    <button class="ghost" onclick="document.getElementById('imp').click()">読み込み</button>
+    <input type="file" id="imp" accept="application/json" hidden onchange="importJson(this)">
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATEGORIES = [
+  { icon: '🛒', label: '食費' },
+  { icon: '🍜', label: '外食' },
+  { icon: '☕', label: 'カフェ' },
+  { icon: '🏪', label: 'コンビニ' },
+  { icon: '💊', label: '医療・薬' },
+  { icon: '📦', label: '日用品' },
+  { icon: '🚃', label: '交通費' },
+  { icon: '🎫', label: '娯楽' },
+  { icon: '⛽', label: 'ガソリン' },
+  { icon: '👕', label: '衣類' },
+  { icon: '📚', label: '教育・書籍' },
+  { icon: '💡', label: 'その他' },
+];
+
+const KEY = 'shopping_items';
+const GKEY = 'shopping_groupmode';
+
+const store = {
+  ok: true,
+  get(k) { try { return localStorage.getItem(k); } catch { this.ok = false; return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch { this.ok = false; return false; } },
+};
+
+let items = load();
+let groupMode = store.get(GKEY) === '1';
+
+function load() {
+  try {
+    const cur = JSON.parse(store.get(KEY) || 'null');
+    if (Array.isArray(cur)) return cur;
+    const old = JSON.parse(store.get('shops') || 'null');
+    if (Array.isArray(old)) return old.map(s => ({
+      id: s.id || uid(), item: s.item || '', qty: '', cat: s.cat || 'その他',
+      date: s.date || '', bought: !!s.bought, boughtAt: s.bought ? Date.now() : 0,
+    }));
+  } catch {}
+  return [];
+}
+
+function save() { store.set(KEY, JSON.stringify(items)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function vibrate() { try { navigator.vibrate && navigator.vibrate(8); } catch {} }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function catIcon(label) {
+  const c = CATEGORIES.find(c => c.label === label);
+  return c ? c.icon : '💡';
+}
+function todayStr() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function fmtDate(s) {
+  if (!s) return null;
+  const t = todayStr();
+  if (s === t) return { text: '今日', cls: 'soon' };
+  const d = new Date(s + 'T00:00:00');
+  const diff = Math.round((d - new Date(t + 'T00:00:00')) / 86400000);
+  if (diff === 1) return { text: '明日', cls: 'soon' };
+  const label = `${d.getMonth() + 1}/${d.getDate()}`;
+  return { text: label, cls: diff < 0 ? 'over' : '' };
+}
+
+function itemHtml(it) {
+  const d = fmtDate(it.date);
+  const dateBadge = d ? `<span class="badge date ${it.bought ? '' : d.cls}">${d.text}</span>` : '';
+  const qty = it.qty ? `<span class="qty-tag">×${esc(it.qty)}</span>` : '';
+  return `
+    <div class="item${it.bought ? ' bought' : ''}">
+      <button class="check${it.bought ? ' on' : ''}" onclick="toggle('${it.id}')">${it.bought ? '✓' : ''}</button>
+      <div class="body">
+        <div class="title">${esc(it.item)}${qty}</div>
+        <div class="meta">
+          <span class="badge">${catIcon(it.cat)} ${esc(it.cat)}</span>
+          ${dateBadge}
+        </div>
+      </div>
+      <button class="del" onclick="remove('${it.id}')">✕</button>
+    </div>`;
+}
+
+function render() {
+  const pending = items.filter(i => !i.bought);
+  const bought = items.filter(i => i.bought).sort((a, b) => (b.boughtAt || 0) - (a.boughtAt || 0));
+
+  document.getElementById('counts').innerHTML =
+    `残り <b>${pending.length}</b> 件 <span style="opacity:.6">/ 購入済み ${bought.length} 件</span>`;
+  document.getElementById('sub').textContent = !store.ok
+    ? '⚠ この環境では保存できません（通常のブラウザで開いてください）'
+    : (pending.length ? `あと ${pending.length} 件` : '買うものはありません');
+  document.getElementById('btnGroup').classList.toggle('on', groupMode);
+
+  const area = document.getElementById('listArea');
+  if (!items.length) {
+    area.innerHTML = '<div class="empty"><span class="big">🛒</span>買い物リストは空です<br>上のフォームから追加してください</div>';
+    return;
+  }
+
+  let html = '';
+  if (pending.length) {
+    if (groupMode) {
+      for (const c of CATEGORIES) {
+        const g = pending.filter(i => i.cat === c.label);
+        if (!g.length) continue;
+        html += `<div class="group-head">${c.icon} ${c.label}（${g.length}）</div>
+                 <div class="list">${g.map(itemHtml).join('')}</div>`;
+      }
+      const other = pending.filter(i => !CATEGORIES.some(c => c.label === i.cat));
+      if (other.length) {
+        html += `<div class="group-head">その他（${other.length}）</div>
+                 <div class="list">${other.map(itemHtml).join('')}</div>`;
+      }
+    } else {
+      html += `<div class="list">${pending.map(itemHtml).join('')}</div>`;
+    }
+  }
+  if (bought.length) {
+    html += `<div class="group-head">購入済み（${bought.length}）</div>
+             <div class="list">${bought.map(itemHtml).join('')}</div>`;
+  }
+  area.innerHTML = html;
+}
+
+function add() {
+  const el = document.getElementById('fItem');
+  const name = el.value.trim();
+  if (!name) {
+    el.classList.add('error');
+    setTimeout(() => el.classList.remove('error'), 800);
+    el.focus();
+    return;
+  }
+  items.unshift({
+    id: uid(),
+    item: name,
+    qty: document.getElementById('fQty').value.trim(),
+    cat: document.getElementById('fCat').value,
+    date: document.getElementById('fDate').value,
+    bought: false,
+    boughtAt: 0,
+  });
+  save(); render(); vibrate();
+  el.value = '';
+  document.getElementById('fQty').value = '';
+  el.focus();
+  toast('追加しました');
+}
+
+function toggle(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  it.bought = !it.bought;
+  it.boughtAt = it.bought ? Date.now() : 0;
+  save(); render(); vibrate();
+}
+
+function remove(id) {
+  items = items.filter(i => i.id !== id);
+  save(); render();
+}
+
+function clearBought() {
+  const n = items.filter(i => i.bought).length;
+  if (!n) { toast('購入済みはありません'); return; }
+  if (!confirm(`購入済み ${n} 件を削除します。よろしいですか？`)) return;
+  items = items.filter(i => !i.bought);
+  save(); render();
+  toast(`${n} 件を削除しました`);
+}
+
+function toggleGroup() {
+  groupMode = !groupMode;
+  store.set(GKEY, groupMode ? '1' : '0');
+  render();
+}
+
+function exportJson() {
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `shopping-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('バックアップを保存しました');
+}
+
+function importJson(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if (!Array.isArray(data)) throw new Error('形式が違います');
+      const ids = new Set(items.map(i => i.id));
+      const add = data.filter(d => d && d.item && !ids.has(d.id));
+      items = add.map(d => ({
+        id: d.id || uid(), item: d.item, qty: d.qty || '', cat: d.cat || 'その他',
+        date: d.date || '', bought: !!d.bought, boughtAt: d.boughtAt || 0,
+      })).concat(items);
+      save(); render();
+      toast(`${add.length} 件を読み込みました`);
+    } catch (e) {
+      toast('読み込めませんでした');
+    }
+    input.value = '';
+  };
+  r.readAsText(f);
+}
+
+document.getElementById('fCat').innerHTML =
+  CATEGORIES.map(c => `<option value="${c.label}">${c.icon} ${c.label}</option>`).join('');
+document.getElementById('fDate').value = todayStr();
+render();
+</script>
+</body>
+</html>
